@@ -12,17 +12,24 @@ def extract_acoustic_features(audio: np.ndarray, sample_rate: int = 16000) -> di
 
     Returns:
         score_0_100 (float): Synthetic acoustic probability score (0 = Natural, 100 = Synthetic/Cloned)
-        feature_details (dict): Raw feature measurements for UI breakdown
+        feature_details (dict): Raw feature measurements & sub-score breakdown for UI/calibration
     """
     if len(audio) < int(sample_rate * 0.2):  # Less than 200ms
         return {
             "score": 0.0,
             "details": {
                 "mfcc_variance": 0.0,
+                "delta_mfcc_variance": 0.0,
                 "spectral_flatness": 0.0,
-                "spectral_rolloff": 0.0,
-                "hf_ratio": 0.0,
-                "spectral_flux": 0.0
+                "spectral_rolloff_hz": 0.0,
+                "hf_energy_ratio": 0.0,
+                "spectral_flux": 0.0,
+                "sub_scores": {
+                    "flatness_risk": 0.0,
+                    "hf_risk": 0.0,
+                    "flux_risk": 0.0,
+                    "smoothness_risk": 0.0
+                }
             }
         }
 
@@ -52,18 +59,19 @@ def extract_acoustic_features(audio: np.ndarray, sample_rate: int = 16000) -> di
     spectral_flux = float(np.mean(np.diff(stft, axis=1) ** 2))
 
     # --- Heuristic Scoring Model (Normalized to 0 - 100) ---
-    # Synthetic TTS/clones typically show:
-    # - Lower delta MFCC variance (overly smooth spectral transitions)
-    # - Higher or unnaturally uniform spectral flatness
-    # - Lower spectral flux (lack of organic micro-transitions)
-    # - Abnormal high-frequency energy ratio drop-offs
+    # 1. Spectral Flatness (vocoder artifact indicator):
+    flatness_risk = float(np.clip(mean_flatness / 0.025, 0.0, 1.0) * 30.0)
 
-    smoothness_risk = np.clip(1.0 - (delta_mfcc_var / 15.0), 0.0, 1.0) * 35.0
-    flatness_risk = np.clip(mean_flatness / 0.05, 0.0, 1.0) * 25.0
-    flux_risk = np.clip(1.0 - (spectral_flux / 0.8), 0.0, 1.0) * 20.0
-    hf_risk = np.clip(1.0 - (hf_ratio / 0.15), 0.0, 1.0) * 20.0
+    # 2. High-Frequency Energy Ratio (>4kHz energy indicator):
+    hf_risk = float(np.clip(hf_ratio / 0.025, 0.0, 1.0) * 30.0)
 
-    raw_synthetic_score = smoothness_risk + flatness_risk + flux_risk + hf_risk
+    # 3. Spectral Flux: Organic speech has dynamic frame transitions (flux 8-12+).
+    flux_risk = float(np.clip(1.0 - (spectral_flux / 12.0), 0.0, 1.0) * 20.0)
+
+    # 4. Delta MFCC Variance: Smoothness risk
+    smoothness_risk = float(np.clip(1.0 - (delta_mfcc_var / 45.0), 0.0, 1.0) * 20.0)
+
+    raw_synthetic_score = flatness_risk + hf_risk + flux_risk + smoothness_risk
     synthetic_score_0_100 = float(np.clip(raw_synthetic_score, 0.0, 100.0))
 
     return {
@@ -74,6 +82,12 @@ def extract_acoustic_features(audio: np.ndarray, sample_rate: int = 16000) -> di
             "spectral_flatness": round(mean_flatness, 5),
             "spectral_rolloff_hz": round(mean_rolloff, 1),
             "hf_energy_ratio": round(hf_ratio, 4),
-            "spectral_flux": round(spectral_flux, 4)
+            "spectral_flux": round(spectral_flux, 4),
+            "sub_scores": {
+                "flatness_risk": round(flatness_risk, 2),
+                "hf_risk": round(hf_risk, 2),
+                "flux_risk": round(flux_risk, 2),
+                "smoothness_risk": round(smoothness_risk, 2)
+            }
         }
     }

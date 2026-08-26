@@ -23,11 +23,11 @@ class ProsodyAnalyzer:
 
     def analyze_chunk(self, audio: np.ndarray, sample_rate: int = 16000) -> dict:
         """
-        Analyzes current audio chunk combined with rolling 3-chunk history buffer.
+        Analyzes current audio chunk combined with rolling history buffer.
 
         Returns:
             score_0_100 (float): Synthetic prosody anomaly score (0 = Natural, 100 = Synthetic/Cloned)
-            details (dict): Extracted features (F0 std, jitter, shimmer, pause regularity)
+            details (dict): Extracted features & sub-score breakdown
         """
         self.audio_buffer.append(audio)
         combined_audio = np.concatenate(list(self.audio_buffer))
@@ -41,7 +41,13 @@ class ProsodyAnalyzer:
                     "jitter_local": 0.0,
                     "shimmer_local": 0.0,
                     "pause_regularity": 0.0,
-                    "rolling_chunks_used": len(self.audio_buffer)
+                    "rolling_chunks_used": len(self.audio_buffer),
+                    "sub_scores": {
+                        "pitch_flatness_risk": 0.0,
+                        "jitter_risk": 0.0,
+                        "shimmer_risk": 0.0,
+                        "pause_risk": 0.0
+                    }
                 }
             }
 
@@ -55,30 +61,19 @@ class ProsodyAnalyzer:
         pause_regularity = self._extract_pause_regularity(combined_audio, sample_rate)
 
         # --- Heuristic Scoring Model (Normalized to 0 - 100) ---
-        # Human speech exhibits organic micro-tremor (jitter 0.5% - 2.5%, shimmer 2% - 8%)
-        # and natural pitch variance (f0_std > 15Hz).
-        # Synthetic speech / TTS often has:
-        # - Unnaturally flat pitch (f0_std < 8Hz) or mechanical step pitch jumps
-        # - Extremely low jitter (< 0.2%) or high artificial jitter (> 5.0%)
-        # - Unnaturally uniform pause duration distributions
+        # Calibrated against actual empirical speech feature ranges:
 
-        pitch_flatness_risk = np.clip(1.0 - (f0_std / 20.0), 0.0, 1.0) * 40.0
+        # 1. Pitch flatness / variance risk:
+        pitch_flatness_risk = float(np.clip(1.0 - (f0_std / 70.0), 0.0, 1.0) * 30.0)
 
-        # Jitter risk (too low = robotic, too high = synthesis artifact)
-        if jitter < 0.002:  # < 0.2%
-            jitter_risk = np.clip(1.0 - (jitter / 0.002), 0.0, 1.0) * 30.0
-        elif jitter > 0.04:  # > 4%
-            jitter_risk = np.clip((jitter - 0.04) / 0.04, 0.0, 1.0) * 30.0
-        else:
-            jitter_risk = 0.0
+        # 2. Jitter risk: Higher jitter (>0.020) indicates synthetic micro-pitch perturbation artifacts
+        jitter_risk = float(np.clip(jitter / 0.035, 0.0, 1.0) * 25.0)
 
-        # Shimmer risk
-        if shimmer < 0.01:
-            shimmer_risk = np.clip(1.0 - (shimmer / 0.01), 0.0, 1.0) * 15.0
-        else:
-            shimmer_risk = 0.0
+        # 3. Shimmer risk: Lower shimmer (<0.10) indicates artificially smooth amplitude control
+        shimmer_risk = float(np.clip(1.0 - (shimmer / 0.15), 0.0, 1.0) * 25.0)
 
-        pause_risk = np.clip(pause_regularity * 15.0, 0.0, 15.0)
+        # 4. Robotic Pause Regularity risk:
+        pause_risk = float(np.clip(pause_regularity / 0.70, 0.0, 1.0) * 20.0)
 
         raw_prosody_score = pitch_flatness_risk + jitter_risk + shimmer_risk + pause_risk
         prosody_score_0_100 = float(np.clip(raw_prosody_score, 0.0, 100.0))
@@ -91,7 +86,13 @@ class ProsodyAnalyzer:
                 "jitter_local": round(jitter, 4),
                 "shimmer_local": round(shimmer, 4),
                 "pause_regularity": round(pause_regularity, 3),
-                "rolling_chunks_used": len(self.audio_buffer)
+                "rolling_chunks_used": len(self.audio_buffer),
+                "sub_scores": {
+                    "pitch_flatness_risk": round(pitch_flatness_risk, 2),
+                    "jitter_risk": round(jitter_risk, 2),
+                    "shimmer_risk": round(shimmer_risk, 2),
+                    "pause_risk": round(pause_risk, 2)
+                }
             }
         }
 
@@ -139,7 +140,6 @@ class ProsodyAnalyzer:
         return jitter_est, shimmer_est
 
     def _extract_pause_regularity(self, audio: np.ndarray, sample_rate: int):
-        # Calculate frame energies to detect pauses
         frame_len = int(sample_rate * 0.02)  # 20ms
         frames = [audio[i:i + frame_len] for i in range(0, len(audio) - frame_len, frame_len)]
         energies = [np.sum(f ** 2) for f in frames]
@@ -150,7 +150,6 @@ class ProsodyAnalyzer:
         median_energy = np.median(energies)
         is_pause = [1 if e < median_energy * 0.1 else 0 for e in energies]
 
-        # Calculate lengths of silent pause blocks
         pause_lengths = []
         curr = 0
         for p in is_pause:
@@ -164,7 +163,6 @@ class ProsodyAnalyzer:
         if len(pause_lengths) < 2:
             return 0.0
 
-        # Regularity is high if pause length standard deviation is unnaturally low
         std_pause = np.std(pause_lengths)
         regularity = float(1.0 / (std_pause + 1.0))
         return regularity

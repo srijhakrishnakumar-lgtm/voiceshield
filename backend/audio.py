@@ -14,7 +14,7 @@ def load_and_preprocess_audio(audio_bytes: bytes, target_sr: int = TARGET_SAMPLE
     resamples to 16kHz mono, and applies VAD silence trimming.
 
     Returns:
-        audio_16k (np.ndarray): 16kHz mono float32 audio array normalized [-1, 1]
+        trimmed_audio (np.ndarray): 16kHz mono float32 audio array normalized [-1, 1]
         sr (int): Target sample rate (16000)
         vad_info (dict): Metadata including original duration, trimmed duration, active speech ratio
     """

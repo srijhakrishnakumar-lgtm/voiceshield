@@ -48,6 +48,13 @@ npm run dev
 
 ---
 
+## Known Limitations & Edge Cases
+- **Band-Limited / Dynamic Pitch TTS Evasion:** High-quality, heavily low-pass-filtered TTS generators with synthetic dynamic pitch modulation (e.g., band-limited neural cloned clips) can currently bypass high-frequency spectral noise and pitch flatness penalties.
+- **Noisy Mic / Speaker 02 Genuine Hindi Artifacts:** Speaker 02's Hindi genuine recordings run warm on Layer A (even after cross-layer dampening) due to natural vocal tract resonance and microphone ambient room hiss. For live demonstrations, using Speaker 01 or Speaker 03 clips is recommended as they exhibit clean, wide separation margins.
+- **Future Enhancements:** Future releases will incorporate dedicated anti-aliasing artifact detectors and Phase Spectrum Deviation (PSD) features to flag band-limited synthetic evasion cases.
+
+---
+
 ## Future Scope & Roadmap
 - Fine-tuning acoustic models on Indian accent datasets (AI4Bharat, Shruti corpus).
 - Telecom-scale deployment via WebRTC / SIP trunk integration.
