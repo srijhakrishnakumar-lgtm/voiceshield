@@ -4,16 +4,23 @@ import IngestControl from './components/IngestControl';
 import RiskGauge from './components/RiskGauge';
 import MultiLayerBreakdown from './components/MultiLayerBreakdown';
 import HistoryLogTable from './components/HistoryLogTable';
-import { ShieldAlert, Activity, Code2, Terminal } from 'lucide-react';
+import AlertModal from './components/AlertModal';
+import { ShieldAlert, Activity, Terminal } from 'lucide-react';
 
 export default function App() {
   const [analysisResult, setAnalysisResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
 
   const handleAnalysisComplete = (res) => {
     setAnalysisResult(res);
     setRefreshTrigger((prev) => prev + 1);
+
+    // Auto-trigger Alert Modal if verdict is MEDIUM, HIGH, or CRITICAL
+    if (res && res.verdict && res.verdict !== 'LOW') {
+      setIsAlertOpen(true);
+    }
   };
 
   return (
@@ -68,7 +75,7 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Raw API Response View Toggle */}
+                {/* Raw API Response View Stream */}
                 <div className="glass-panel p-4 rounded-xl border border-slate-800 space-y-2">
                   <div className="flex items-center justify-between text-xs font-mono text-slate-400 border-b border-slate-800 pb-2">
                     <span className="flex items-center gap-1.5 text-cyan-400 font-bold uppercase">
@@ -98,6 +105,13 @@ export default function App() {
         {/* Bottom Section: SQLite History Audit Log */}
         <HistoryLogTable refreshTrigger={refreshTrigger} />
       </main>
+
+      {/* Alert Modal for Medium/High/Critical Verdicts */}
+      <AlertModal
+        isOpen={isAlertOpen}
+        onClose={() => setIsAlertOpen(false)}
+        result={analysisResult}
+      />
 
       <footer className="glass-panel border-t border-slate-900 py-4 mt-auto">
         <div className="max-w-7xl mx-auto px-4 text-center text-xs font-mono text-slate-500">
