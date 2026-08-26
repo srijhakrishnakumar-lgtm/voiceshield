@@ -7,8 +7,9 @@ class ChunkLog(Base):
     __tablename__ = "chunk_logs"
 
     id = Column(Integer, primary_key=True, index=True)
+    filename = Column(String, nullable=True)
     session_id = Column(String, index=True, default="default-session")
-    chunk_index = Column(Integer, index=True)
+    chunk_index = Column(Integer, index=True, default=1)
     layer_a_score = Column(Float, nullable=False)  # 0 - 100 Acoustic / Spectral
     layer_b_score = Column(Float, nullable=False)  # 0 - 100 Prosody / Behavioral
     composite_score = Column(Float, nullable=False)  # 0 - 100 Composite Risk
