@@ -5,6 +5,7 @@ import RiskGauge from './components/RiskGauge';
 import MultiLayerBreakdown from './components/MultiLayerBreakdown';
 import HistoryLogTable from './components/HistoryLogTable';
 import AlertModal from './components/AlertModal';
+import PrivacyCompliancePanel from './components/PrivacyCompliancePanel';
 import { ShieldAlert, Activity, Terminal } from 'lucide-react';
 
 export default function App() {
@@ -40,6 +41,9 @@ export default function App() {
             </p>
           </div>
         </div>
+
+        {/* Privacy & Compliance Banner */}
+        <PrivacyCompliancePanel />
 
         {/* Main Grid: Control & Risk Visualizations */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
