@@ -1,14 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Navbar from './components/Navbar';
-import { ShieldAlert, Server, Cpu, Database } from 'lucide-react';
+import IngestControl from './components/IngestControl';
+import { ShieldAlert, Terminal, Code2 } from 'lucide-react';
 
 export default function App() {
+  const [analysisResult, setAnalysisResult] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 cyber-grid flex flex-col">
       <Navbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-        {/* Dashboard Header banner */}
+        {/* Dashboard Header Banner */}
         <div className="glass-panel p-6 rounded-xl border border-slate-800 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-bold font-mono text-cyan-400 flex items-center gap-2">
@@ -19,34 +23,65 @@ export default function App() {
               Multi-Layer Acoustic & Prosodic Synthesis Detection Engine for Live Authentication Streams
             </p>
           </div>
-          <div className="flex items-center gap-3 text-xs font-mono text-slate-400">
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-900 border border-slate-800">
-              <Server className="w-3.5 h-3.5 text-cyan-400" /> FastAPI Active
-            </span>
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-slate-900 border border-slate-800">
-              <Database className="w-3.5 h-3.5 text-emerald-400" /> SQLite Logged
-            </span>
-          </div>
         </div>
 
-        {/* Dashboard Placeholder Grid (Will be populated in next steps) */}
+        {/* Dashboard Main Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-1 glass-panel p-6 rounded-xl border border-slate-800">
-            <h3 className="text-sm font-bold font-mono text-slate-300 uppercase tracking-wider mb-4">
-              Ingest Control
-            </h3>
-            <p className="text-xs text-slate-500 font-mono">
-              Audio stream selector & file uploader component...
-            </p>
+          {/* Left Panel: Ingest Control */}
+          <div className="lg:col-span-1">
+            <IngestControl
+              onAnalysisComplete={(res) => setAnalysisResult(res)}
+              isLoading={isLoading}
+              setIsLoading={setIsLoading}
+            />
           </div>
 
+          {/* Right Panel: Analysis Raw JSON Output */}
           <div className="lg:col-span-2 glass-panel p-6 rounded-xl border border-slate-800 space-y-4">
-            <h3 className="text-sm font-bold font-mono text-slate-300 uppercase tracking-wider">
-              Live Impersonation Risk Score
-            </h3>
-            <p className="text-xs text-slate-500 font-mono">
-              Composite risk gauge, multi-layer feature breakdown & alert modal...
-            </p>
+            <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+              <h3 className="text-sm font-bold font-mono text-slate-200 uppercase tracking-wider flex items-center gap-2">
+                <Terminal className="w-4 h-4 text-cyan-400" />
+                Backend API Raw Response Stream
+              </h3>
+              <span className="text-xs font-mono text-slate-400 flex items-center gap-1.5">
+                <Code2 className="w-3.5 h-3.5 text-cyan-400" /> POST /api/analyze-audio-chunk
+              </span>
+            </div>
+
+            {analysisResult ? (
+              <div className="space-y-4">
+                <div className="p-4 bg-slate-900/90 rounded-lg border border-slate-800 font-mono text-xs overflow-x-auto text-cyan-300">
+                  <pre>{JSON.stringify(analysisResult, null, 2)}</pre>
+                </div>
+                
+                {/* Highlights Summary */}
+                <div className="grid grid-cols-3 gap-3 font-mono text-xs">
+                  <div className="p-3 bg-slate-900 rounded-lg border border-slate-800 text-center">
+                    <span className="text-slate-500 block text-[10px]">LAYER A ACOUSTIC</span>
+                    <span className="text-sm font-bold text-slate-200">{analysisResult.layer_a_score}</span>
+                  </div>
+                  <div className="p-3 bg-slate-900 rounded-lg border border-slate-800 text-center">
+                    <span className="text-slate-500 block text-[10px]">LAYER B PROSODY</span>
+                    <span className="text-sm font-bold text-slate-200">{analysisResult.layer_b_score}</span>
+                  </div>
+                  <div className="p-3 bg-slate-900 rounded-lg border border-slate-800 text-center">
+                    <span className="text-slate-500 block text-[10px]">COMPOSITE RISK</span>
+                    <span className={`text-sm font-bold ${
+                      analysisResult.composite_score < 35 ? 'text-emerald-400' :
+                      analysisResult.composite_score <= 65 ? 'text-amber-400' : 'text-rose-400'
+                    }`}>
+                      {analysisResult.composite_score} ({analysisResult.verdict})
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="h-64 flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-slate-800/80 rounded-lg text-slate-500 font-mono text-xs">
+                <Terminal className="w-8 h-8 text-slate-600 mb-2 animate-pulse" />
+                <p>Select a sample clip or upload a WAV file and click "Analyze Voice Stream"</p>
+                <p className="text-[10px] text-slate-600 mt-1">Default demo pair: speaker01_en_01.wav (Genuine vs Cloned)</p>
+              </div>
+            )}
           </div>
         </div>
       </main>
