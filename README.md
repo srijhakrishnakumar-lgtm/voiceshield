@@ -133,7 +133,9 @@ VoiceShield is engineered with a **Zero Raw Audio Persistence Principle**:
    High-quality, heavily low-pass-filtered TTS generators with synthetic dynamic pitch modulation (e.g., band-limited neural cloned clips like `speaker02_ta_02_`) can currently bypass high-frequency spectral noise and pitch flatness penalties.
 2. **Ambient Microphone Hiss (Speaker 02 Hindi Recordings):**
    `speaker02` Hindi genuine recordings run warm on Layer A due to strong room background mic noise. While cross-layer dampening reduces the composite score, **using Speaker 01 or Speaker 03 audio clips is explicitly recommended for live demonstrations**, as they exhibit clean, wide separation margins (+35.64 points).
-3. **Simulated File Ingestion vs. Live Streaming:**
+3. **High-Fidelity Commercial TTS Evasion (ElevenLabs and similar):**
+   Testing against modern commercial voice cloning platforms (e.g., ElevenLabs) revealed that high-quality neural TTS with advanced prosody modeling can evade detection, scoring LOW/PASS despite being fully synthetic. This is consistent with the Tamil TTS edge case already documented, and reflects a known limitation of DSP/prosody-based detection against state-of-the-art cloning tools. This finding directly motivates the Layer C / deep-learning-based detection roadmap item as the highest priority next step, since acoustic-only detection has a natural ceiling against the newest generation of voice synthesis models.
+4. **Simulated File Ingestion vs. Live Streaming:**
    The current demonstration UI uses file-based audio ingestion (`.wav`) to simulate chunk-by-chunk processing. Real-time live microphone streaming over WebSockets is scoped as Future Work.
 
 ---
